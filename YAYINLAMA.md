@@ -22,8 +22,8 @@ Bu rehber Lezzet Rotası'nı Google Cloud'a kurmayı ve uygulamayı Google Play'
 En kolayı tarayıcıdaki **Cloud Shell**'dir (konsolun sağ üstündeki `>_` simgesi). gcloud orada kurulu gelir.
 
 ```bash
-git clone https://github.com/<kullanıcı-adınız>/lezzet-rotasi.git
-cd lezzet-rotasi
+git clone https://github.com/ilhanguzel91-wq/lezzet.git
+cd lezzet
 PROJECT_ID=<proje-kimliği> ADMIN_EMAIL=<sizin-e-postanız> bash deploy/gcp-kurulum.sh
 ```
 
