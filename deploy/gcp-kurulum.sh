@@ -15,18 +15,36 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."   # depo kök klasörü (server/ burada)
 
-if [[ -z "${PROJECT_ID:-}" ]]; then
+# Removes spaces, invisible characters, quotes and <> that often come with copy-paste.
+clean() { printf '%s' "$1" | LC_ALL=C tr -cd 'A-Za-z0-9@._+-' ; }
+valid_project() { [[ "$1" =~ ^[a-z][a-z0-9-]{4,28}[a-z0-9]$ ]]; }
+valid_email() { [[ "$1" =~ ^[A-Za-z0-9._+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]]; }
+
+PROJECT_ID=$(clean "${PROJECT_ID:-}")
+if ! valid_project "$PROJECT_ID"; then
   CURRENT=$(gcloud config get-value project 2>/dev/null || true)
   echo "Erişebildiğiniz projeler:"
   gcloud projects list --format='table(projectId, name)' || true
-  read -r -p "Kullanılacak proje kimliği [${CURRENT}]: " PROJECT_ID
-  PROJECT_ID="${PROJECT_ID:-$CURRENT}"
+  for _ in 1 2 3; do
+    read -r -p "Kullanılacak proje kimliği (Enter = ${CURRENT}): " ANSWER
+    PROJECT_ID=$(clean "${ANSWER:-$CURRENT}")
+    valid_project "$PROJECT_ID" && break
+    echo "  '$PROJECT_ID' geçerli bir proje kimliği değil. Yukarıdaki listeden PROJECT_ID sütunundaki değeri yazın."
+  done
+  valid_project "$PROJECT_ID" || exit 1
 fi
-if [[ -z "${ADMIN_EMAIL:-}" ]]; then
-  read -r -p "Yönetim paneli için e-posta adresiniz: " ADMIN_EMAIL
+
+ADMIN_EMAIL=$(clean "${ADMIN_EMAIL:-}" | tr 'A-Z' 'a-z')
+if ! valid_email "$ADMIN_EMAIL"; then
+  for _ in 1 2 3; do
+    read -r -p "Yönetim paneli için e-posta adresiniz (örn. ad.soyad@gmail.com): " ANSWER
+    ADMIN_EMAIL=$(clean "$ANSWER" | tr 'A-Z' 'a-z')
+    valid_email "$ADMIN_EMAIL" && break
+    echo "  Okunan değer: '$ADMIN_EMAIL' — geçerli bir e-posta değil, tekrar deneyin (Türkçe karakter kullanmayın)."
+  done
+  valid_email "$ADMIN_EMAIL" || exit 1
 fi
-[[ "$PROJECT_ID" =~ ^[a-z][a-z0-9-]{4,28}[a-z0-9]$ ]] || { echo "Geçersiz proje kimliği: '$PROJECT_ID'"; exit 1; }
-[[ "$ADMIN_EMAIL" =~ ^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$ ]] || { echo "Geçersiz e-posta: '$ADMIN_EMAIL'"; exit 1; }
+echo "Proje: $PROJECT_ID   Yönetici e-postası: $ADMIN_EMAIL"
 
 BILLING=$(gcloud billing projects describe "$PROJECT_ID" --format='value(billingEnabled)' 2>/dev/null || true)
 if [[ -z "$BILLING" ]]; then
