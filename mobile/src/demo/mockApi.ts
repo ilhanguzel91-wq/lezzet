@@ -94,7 +94,20 @@ function toBusiness(b: Biz) {
   };
 }
 
-function filterList(q: URLSearchParams) {
+type Query = { get: (key: string) => string | null };
+
+function parseQuery(query: string): Query {
+  const map = new Map<string, string>();
+  for (const part of query.split('&')) {
+    if (!part) continue;
+    const [k, v = ''] = part.split('=');
+    const dec = (x: string) => decodeURIComponent(x.replace(/\+/g, ' '));
+    map.set(dec(k), dec(v));
+  }
+  return { get: (key) => map.get(key) ?? null };
+}
+
+function filterList(q: Query) {
   const tags = (q.get('tags') || '').split(',').filter(Boolean);
   const cuisines = (q.get('cuisine') || '').split(',').filter(Boolean);
   const maxPrice = Number(q.get('maxPrice') || 0);
@@ -152,7 +165,7 @@ const reservationView = (r: Reservation) => ({
   userName: state.users.find((u) => u.id === r.userId)?.name ?? '',
 });
 
-function point(q: URLSearchParams, coordKey: string, cityKey: string, name: string): [number, number] {
+function point(q: Query, coordKey: string, cityKey: string, name: string): [number, number] {
   const c = q.get(coordKey);
   if (c) {
     const [lat, lng] = c.split(',').map(Number);
@@ -166,9 +179,9 @@ function point(q: URLSearchParams, coordKey: string, cityKey: string, name: stri
 /** Handles one API call. `token` is "demo-<userId>". */
 export async function mockApi(path: string, method: string, body: any, token: string | null): Promise<unknown> {
   await new Promise((r) => setTimeout(r, 120)); // feel like a network call
-  const url = new URL(path, 'http://demo');
-  const q = url.searchParams;
-  const p = url.pathname;
+  // Parsed by hand: React Native's URL/URLSearchParams support is incomplete.
+  const [p, query = ''] = path.split('?');
+  const q = parseQuery(query);
   const me = token ? state.users.find((u) => `demo-${u.id}` === token) ?? null : null;
   const needUser = () => me ?? fail(401, 'Giriş yapmanız gerekiyor.');
   const route = (m: string, re: RegExp) => (method === m ? re.exec(p) : null);
