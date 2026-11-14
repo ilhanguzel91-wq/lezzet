@@ -1,5 +1,9 @@
 import Constants from 'expo-constants';
 import type { Filters } from './types';
+import { mockApi } from '../demo/mockApi';
+
+/** Browser demo build: answers API calls inside the page (see src/demo/mockApi.ts). */
+export const DEMO = process.env.EXPO_PUBLIC_DEMO === '1';
 
 /**
  * API base URL. On a physical phone "localhost" is the phone itself, so set
@@ -20,6 +24,14 @@ export class ApiError extends Error {
 }
 
 export async function api<T>(path: string, options: { method?: string; body?: unknown } = {}): Promise<T> {
+  if (DEMO) {
+    try {
+      return (await mockApi(path, options.method ?? 'GET', options.body ?? {}, authToken)) as T;
+    } catch (e) {
+      const err = e as { status?: number; message: string };
+      throw new ApiError(err.status ?? 500, err.message);
+    }
+  }
   let res: Response;
   try {
     res = await fetch(API_URL + path, {

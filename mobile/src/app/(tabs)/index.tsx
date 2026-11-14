@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FlatList, Linking, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { api, filterQuery } from '../../lib/api';
+import { api, DEMO, filterQuery } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { currentPosition } from '../../lib/location';
 import { useMeta } from '../../lib/meta';
@@ -16,8 +16,8 @@ import { Badge, Button, Card, Chip, Empty, ErrorText, SectionTitle } from '../..
 export default function RouteScreen() {
   const meta = useMeta();
   const { user } = useAuth();
-  const [from, setFrom] = useState<string | null>(MY_LOCATION);
-  const [to, setTo] = useState<string | null>(null);
+  const [from, setFrom] = useState<string | null>(DEMO ? 'Ankara' : MY_LOCATION);
+  const [to, setTo] = useState<string | null>(DEMO ? 'Antalya' : null);
   const [corridor, setCorridor] = useState(10);
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [result, setResult] = useState<RouteResult | null>(null);
@@ -57,6 +57,11 @@ export default function RouteScreen() {
     }
   }
 
+  // Demo build opens on a ready example route.
+  useEffect(() => {
+    if (DEMO) Promise.resolve().then(() => search());
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const pins = useMemo(
     () =>
       result?.stops.map((b) => ({
@@ -74,6 +79,14 @@ export default function RouteScreen() {
 
   const header = (
     <View>
+      {DEMO && (
+        <Card style={{ backgroundColor: colors.accentSoft, borderColor: colors.accentSoft }}>
+          <Text style={{ color: colors.ink, fontWeight: '700' }}>Tanıtım sürümü</Text>
+          <Text style={styles.small}>
+            İşletmeler ve yorumlar örnektir. Yaptıklarınız yalnızca bu tarayıcıda saklanır. Harita bu sürümde OpenStreetMap; telefon uygulamasında Google Maps kullanılır.
+          </Text>
+        </Card>
+      )}
       <View style={{ flexDirection: 'row', gap: 8 }}>
         <CityPicker label="Nereden" value={from} cities={meta?.cities ?? []} allowMyLocation onChange={setFrom} />
         <CityPicker label="Nereye" value={to} cities={meta?.cities ?? []} onChange={setTo} />

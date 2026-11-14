@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TextInput, View } from 'react-native';
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
 import { router } from 'expo-router';
-import { api } from '../lib/api';
+import { api, DEMO } from '../lib/api';
 import { currentPosition } from '../lib/location';
 import { colors, radius } from '../lib/theme';
 import { Button, ErrorText } from '../components/ui';
@@ -43,7 +43,11 @@ export default function ScanScreen() {
 
   const manualEntry = (
     <View style={s.manual}>
-      <Text style={s.small}>Kamera çalışmıyorsa QR kodun altındaki kodu yazın:</Text>
+      <Text style={s.small}>
+        {DEMO
+          ? 'Tanıtım sürümü: işletmenin kodunu yazın (ör. demo-qr-9 = Ulus Tava Evi). Bu sürümde konum kontrolü kapalıdır.'
+          : 'Kamera çalışmıyorsa QR kodun altındaki kodu yazın:'}
+      </Text>
       <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
         <TextInput
           style={s.input}
@@ -63,8 +67,12 @@ export default function ScanScreen() {
   if (!permission.granted) {
     return (
       <View style={s.center}>
-        <Text style={s.text}>İşletmedeki QR kodu okutmak için kamera izni gerekiyor.</Text>
-        <Button title="Kameraya izin ver" onPress={requestPermission} />
+        {!DEMO && (
+          <>
+            <Text style={s.text}>İşletmedeki QR kodu okutmak için kamera izni gerekiyor.</Text>
+            <Button title="Kameraya izin ver" onPress={requestPermission} />
+          </>
+        )}
         {manualEntry}
         {busy && <ActivityIndicator color={colors.accent} />}
         <ErrorText text={error} />

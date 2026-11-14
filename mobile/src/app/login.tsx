@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '../lib/auth';
+import { DEMO } from '../lib/api';
 import { colors, radius } from '../lib/theme';
-import { Button, ErrorText } from '../components/ui';
+import { Button, Card, ErrorText } from '../components/ui';
 
 export default function LoginScreen() {
   const { login, register } = useAuth();
@@ -33,6 +34,16 @@ export default function LoginScreen() {
     <ScrollView contentContainerStyle={{ padding: 20 }} keyboardShouldPersistTaps="handled">
       <Text style={s.title}>{mode === 'login' ? 'Tekrar hoş geldiniz' : 'Hesap oluşturun'}</Text>
       <Text style={s.muted}>Puan vermek, ödül kazanmak ve rezervasyon yapmak için giriş yapın.</Text>
+      {DEMO && mode === 'login' && (
+        <Card style={{ marginTop: 4 }}>
+          <Text style={{ color: colors.ink, fontWeight: '600' }}>Tanıtım hesapları</Text>
+          <Text style={s.muted}>Gezgin: kullanici@lezzetrotasi.local · İşletme sahibi: isletme@lezzetrotasi.local · Şifre: demo123</Text>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <Button title="Gezgin" variant="ghost" style={{ flex: 1 }} onPress={() => { setEmail('kullanici@lezzetrotasi.local'); setPassword('demo123'); }} />
+            <Button title="İşletme sahibi" variant="ghost" style={{ flex: 1 }} onPress={() => { setEmail('isletme@lezzetrotasi.local'); setPassword('demo123'); }} />
+          </View>
+        </Card>
+      )}
       {mode === 'register' && <TextInput style={s.input} placeholder="Ad Soyad" value={name} onChangeText={setName} autoComplete="name" />}
       <TextInput
         style={s.input}
