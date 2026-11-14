@@ -1,24 +1,21 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { FlatList, Linking, StyleSheet, Text, View } from 'react-native';
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { router } from 'expo-router';
 import { api, filterQuery } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { currentPosition } from '../../lib/location';
 import { useMeta } from '../../lib/meta';
-import { colors, radius } from '../../lib/theme';
+import { colors } from '../../lib/theme';
 import { emptyFilters, type Filters, type RouteResult } from '../../lib/types';
 import { BusinessCard } from '../../components/BusinessCard';
+import { RouteMap } from '../../components/RouteMap';
 import { CityPicker, MY_LOCATION } from '../../components/CityPicker';
 import { FilterBar } from '../../components/FilterBar';
 import { Badge, Button, Card, Chip, Empty, ErrorText, SectionTitle } from '../../components/ui';
 
-const TURKEY = { latitude: 39.0, longitude: 35.0, latitudeDelta: 9, longitudeDelta: 14 };
-
 export default function RouteScreen() {
   const meta = useMeta();
   const { user } = useAuth();
-  const mapRef = useRef<MapView>(null);
   const [from, setFrom] = useState<string | null>(MY_LOCATION);
   const [to, setTo] = useState<string | null>(null);
   const [corridor, setCorridor] = useState(10);
@@ -53,8 +50,6 @@ export default function RouteScreen() {
       p.set('corridorKm', String(corridor));
       const r = await api<RouteResult>(`/route?${p}`);
       setResult(r);
-      const coords = r.route.points.map(([latitude, longitude]) => ({ latitude, longitude }));
-      setTimeout(() => mapRef.current?.fitToCoordinates(coords, { edgePadding: { top: 30, right: 30, bottom: 30, left: 30 }, animated: true }), 300);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -62,7 +57,18 @@ export default function RouteScreen() {
     }
   }
 
-  const line = useMemo(() => result?.route.points.map(([latitude, longitude]) => ({ latitude, longitude })) ?? [], [result]);
+  const pins = useMemo(
+    () =>
+      result?.stops.map((b) => ({
+        id: b.id,
+        lat: b.lat,
+        lng: b.lng,
+        title: b.name,
+        subtitle: `${b.cuisine} · ${b.rating.average ?? '–'}★`,
+        color: b.inspected ? colors.ok : colors.accent,
+      })) ?? [],
+    [result],
+  );
   const hours = result ? Math.floor(result.route.durationMin / 60) : 0;
   const mins = result ? result.route.durationMin % 60 : 0;
 
@@ -89,21 +95,7 @@ export default function RouteScreen() {
       <Button title="Lezzet duraklarını bul" onPress={() => search()} loading={loading} style={{ marginTop: 6 }} />
       <ErrorText text={error} />
 
-      <View style={styles.mapWrap}>
-        <MapView ref={mapRef} style={StyleSheet.absoluteFill} provider={PROVIDER_GOOGLE} initialRegion={TURKEY} showsUserLocation>
-          {line.length > 0 && <Polyline coordinates={line} strokeColor={colors.accent} strokeWidth={4} />}
-          {result?.stops.map((b) => (
-            <Marker
-              key={b.id}
-              coordinate={{ latitude: b.lat, longitude: b.lng }}
-              title={b.name}
-              description={`${b.cuisine} · ${b.rating.average ?? '–'}★`}
-              pinColor={b.inspected ? colors.ok : colors.accent}
-              onCalloutPress={() => router.push(`/business/${b.id}`)}
-            />
-          ))}
-        </MapView>
-      </View>
+      <RouteMap height={260} line={result?.route.points} pins={pins} onPinPress={(id) => router.push(`/business/${id}`)} />
 
       {result && (
         <Card>
@@ -176,6 +168,5 @@ export default function RouteScreen() {
 const styles = StyleSheet.create({
   corridorRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', marginTop: 10, gap: 4 },
   small: { color: colors.muted, fontSize: 13, marginRight: 6 },
-  mapWrap: { height: 260, borderRadius: radius, overflow: 'hidden', marginVertical: 12, borderWidth: 1, borderColor: colors.line },
   summary: { fontSize: 16, fontWeight: '700', color: colors.ink },
 });

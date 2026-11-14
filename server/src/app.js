@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import QRCode from 'qrcode';
 import crypto from 'node:crypto';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { hashPassword, verifyPassword, issueToken, authOptional, requireRole } from './auth.js';
@@ -543,6 +544,13 @@ export function createApp(db) {
       pendingReservations: await one("SELECT COUNT(*) FROM reservations WHERE status = 'pending'"),
     });
   }));
+
+  // ----- optional: browser preview of the mobile app (expo export -p web) -----
+  const webDir = process.env.WEB_DIR && path.resolve(process.env.WEB_DIR);
+  if (webDir && fs.existsSync(path.join(webDir, 'index.html'))) {
+    app.use(express.static(webDir));
+    app.get(/^\/(?!api(\/|$)|admin(\/|$)).*/, (_req, res) => res.sendFile(path.join(webDir, 'index.html')));
+  }
 
   // ----- errors -----
   app.use('/api', (_req, res) => res.status(404).json({ error: 'Bulunamadı.' }));

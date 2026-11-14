@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import * as SecureStore from 'expo-secure-store';
+import { tokenStore } from './storage';
 import { api, setApiToken } from './api';
 import type { Rewards, User } from './types';
 
@@ -29,7 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setRewards(me.rewards);
     } catch {
       setApiToken(null);
-      await SecureStore.deleteItemAsync(TOKEN_KEY);
+      await tokenStore.remove(TOKEN_KEY);
       setUser(null);
       setRewards(null);
     }
@@ -37,7 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     (async () => {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
+      const token = await tokenStore.get(TOKEN_KEY);
       if (token) {
         setApiToken(token);
         await refresh();
@@ -49,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const accept = useCallback(
     async (r: { token: string }) => {
       setApiToken(r.token);
-      await SecureStore.setItemAsync(TOKEN_KEY, r.token);
+      await tokenStore.set(TOKEN_KEY, r.token);
       await refresh();
     },
     [refresh],
@@ -66,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         accept(await api<{ token: string }>('/auth/register', { method: 'POST', body: { name, email, password } })),
       logout: async () => {
         setApiToken(null);
-        await SecureStore.deleteItemAsync(TOKEN_KEY);
+        await tokenStore.remove(TOKEN_KEY);
         setUser(null);
         setRewards(null);
       },

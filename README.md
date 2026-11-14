@@ -81,6 +81,20 @@ EXPO_PUBLIC_API_URL=http://<bilgisayarın-yerel-IP'si>:4000/api npx expo start
 - Google Maps anahtarları koda yazılmaz. `GOOGLE_MAPS_ANDROID_API_KEY` ve `GOOGLE_MAPS_IOS_API_KEY` ortam değişkenlerinden okunur (`app.config.js`). Ayrıntılar: [YAYINLAMA.md](YAYINLAMA.md).
 - Kontroller: `npm run typecheck`, `npx expo lint`
 
+### Tarayıcıda önizleme
+
+Uygulamanın web sürümü sunucu üzerinden tek adreste çalıştırılabilir. Bu sürümde harita OpenStreetMap'tir; telefonda Google Maps kullanılır.
+
+```bash
+cd mobile && EXPO_PUBLIC_API_URL=/api npx expo export --platform web
+```
+
+```bash
+cd server && WEB_DIR=../mobile/dist npm start
+```
+
+Ardından `http://localhost:4000` adresini açın. Kamera yoksa QR ekranında kod elle girilebilir (örnek: `demo-qr-9`). Ziyaret onayı için konumun işletmeye 300 m'den yakın olması gerekir.
+
 ## API özeti
 
 | Uç nokta | Açıklama |

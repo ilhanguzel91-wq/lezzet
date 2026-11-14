@@ -1,13 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { router } from 'expo-router';
 import { api, filterQuery } from '../../lib/api';
 import { currentPosition, type Coords } from '../../lib/location';
 import { useMeta } from '../../lib/meta';
-import { colors, radius } from '../../lib/theme';
+import { colors } from '../../lib/theme';
 import { emptyFilters, type Business, type Filters } from '../../lib/types';
 import { BusinessCard } from '../../components/BusinessCard';
+import { RouteMap } from '../../components/RouteMap';
 import { FilterBar } from '../../components/FilterBar';
 import { Button, Chip, Empty, ErrorText } from '../../components/ui';
 
@@ -56,6 +56,11 @@ export default function NearbyScreen() {
       });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const pins = useMemo(
+    () => (items ?? []).map((b) => ({ id: b.id, lat: b.lat, lng: b.lng, title: b.name, subtitle: b.cuisine, color: colors.accent })),
+    [items],
+  );
+
   return (
     <FlatList
       contentContainerStyle={{ padding: 16 }}
@@ -80,25 +85,12 @@ export default function NearbyScreen() {
           <ErrorText text={error} />
           {error && <Button title="Tekrar dene" onPress={() => load(null)} variant="ghost" />}
           {pos && (
-            <View style={styles.mapWrap}>
-              <MapView
-                style={StyleSheet.absoluteFill}
-                provider={PROVIDER_GOOGLE}
-                showsUserLocation
-                region={{ latitude: pos.lat, longitude: pos.lng, latitudeDelta: radiusKm / 50, longitudeDelta: radiusKm / 50 }}
-              >
-                {items?.map((b) => (
-                  <Marker
-                    key={b.id}
-                    coordinate={{ latitude: b.lat, longitude: b.lng }}
-                    title={b.name}
-                    description={b.cuisine}
-                    pinColor={colors.accent}
-                    onCalloutPress={() => router.push(`/business/${b.id}`)}
-                  />
-                ))}
-              </MapView>
-            </View>
+            <RouteMap
+              height={220}
+              pins={pins}
+              center={{ lat: pos.lat, lng: pos.lng, radiusKm }}
+              onPinPress={(id) => router.push(`/business/${id}`)}
+            />
           )}
         </View>
       }
@@ -111,5 +103,4 @@ export default function NearbyScreen() {
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4 },
   small: { color: colors.muted, fontSize: 13, marginRight: 6 },
-  mapWrap: { height: 220, borderRadius: radius, overflow: 'hidden', marginVertical: 12, borderWidth: 1, borderColor: colors.line },
 });
