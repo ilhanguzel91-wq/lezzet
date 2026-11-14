@@ -24,10 +24,10 @@ En kolayı tarayıcıdaki **Cloud Shell**'dir (konsolun sağ üstündeki `>_` si
 ```bash
 git clone https://github.com/ilhanguzel91-wq/lezzet.git
 cd lezzet
-PROJECT_ID=<proje-kimliği> ADMIN_EMAIL=<sizin-e-postanız> bash deploy/gcp-kurulum.sh
+bash deploy/gcp-kurulum.sh
 ```
 
-Betik sırasıyla şunları yapar:
+Betik önce proje kimliğini ve e-posta adresinizi sorar (köşeli parantezdeki değeri kabul etmek için yalnızca Enter'a basın). Faturalandırma kapalıysa bunu söyleyip durur. Sonra sırasıyla şunları yapar:
 - Gerekli API'leri açar.
 - PostgreSQL veritabanını kurar.
 - Veritabanı şifresini, oturum anahtarını ve **ilk yönetici şifresini** üretip Secret Manager'a koyar. Yönetici şifresi ekrana bir kez yazılır, **hemen not edin**.

@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Lezzet Rotası — Google Cloud kurulumu ve sunucu yayını.
 #
-# Kullanım (Cloud Shell'de veya gcloud kurulu bilgisayarda, depo kök dizininden):
+# Kullanım (Cloud Shell'de, depo klasörünün içinden):
+#   bash deploy/gcp-kurulum.sh
+# Proje kimliği ve yönetici e-postası sorulur. Sormadan çalıştırmak için:
 #   PROJECT_ID=lezzet-rotasi-123 ADMIN_EMAIL=siz@ornek.com bash deploy/gcp-kurulum.sh
 #
 # İsteğe bağlı:
@@ -11,8 +13,31 @@
 # Tekrar çalıştırılabilir: var olan kaynaklar atlanır, yalnızca yeni sürüm yayınlanır.
 set -euo pipefail
 
-: "${PROJECT_ID:?PROJECT_ID verin (Google Cloud proje kimliği)}"
-: "${ADMIN_EMAIL:?ADMIN_EMAIL verin (ilk yönetici hesabının e-postası)}"
+cd "$(dirname "$0")/.."   # depo kök klasörü (server/ burada)
+
+if [[ -z "${PROJECT_ID:-}" ]]; then
+  CURRENT=$(gcloud config get-value project 2>/dev/null || true)
+  echo "Erişebildiğiniz projeler:"
+  gcloud projects list --format='table(projectId, name)' || true
+  read -r -p "Kullanılacak proje kimliği [${CURRENT}]: " PROJECT_ID
+  PROJECT_ID="${PROJECT_ID:-$CURRENT}"
+fi
+if [[ -z "${ADMIN_EMAIL:-}" ]]; then
+  read -r -p "Yönetim paneli için e-posta adresiniz: " ADMIN_EMAIL
+fi
+[[ "$PROJECT_ID" =~ ^[a-z][a-z0-9-]{4,28}[a-z0-9]$ ]] || { echo "Geçersiz proje kimliği: '$PROJECT_ID'"; exit 1; }
+[[ "$ADMIN_EMAIL" =~ ^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$ ]] || { echo "Geçersiz e-posta: '$ADMIN_EMAIL'"; exit 1; }
+
+BILLING=$(gcloud billing projects describe "$PROJECT_ID" --format='value(billingEnabled)' 2>/dev/null || true)
+if [[ -z "$BILLING" ]]; then
+  echo "Uyarı: faturalandırma durumu okunamadı; devam ediliyor. Hata alırsanız faturalandırmayı kontrol edin."
+elif [[ "$BILLING" != "True" ]]; then
+  echo
+  echo "Bu projede faturalandırma açık değil. Önce şu adresten bir faturalandırma hesabı bağlayın:"
+  echo "  https://console.cloud.google.com/billing/linkedaccount?project=$PROJECT_ID"
+  echo "Sonra bu komutu tekrar çalıştırın."
+  exit 1
+fi
 REGION="${REGION:-europe-west1}"
 INSTANCE="lezzet-db"
 DB_NAME="lezzet"
