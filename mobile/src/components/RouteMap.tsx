@@ -1,8 +1,14 @@
 import { useEffect, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { colors, radius } from '../lib/theme';
 import { TURKEY_CENTER, type RouteMapProps } from './mapTypes';
+
+// Google Maps everywhere, except on iPhone inside the Expo Go app (no Google Maps SDK there):
+// that preview uses Apple Maps. Real builds (EAS) always use Google Maps.
+const inExpoGoOnIos = Platform.OS === 'ios' && Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+const provider = inExpoGoOnIos ? undefined : PROVIDER_GOOGLE;
 
 /** Native map (Google Maps on iOS and Android). The browser version is RouteMap.web.tsx. */
 export function RouteMap({ height, line, pins, center, onPinPress }: RouteMapProps) {
@@ -26,7 +32,7 @@ export function RouteMap({ height, line, pins, center, onPinPress }: RouteMapPro
       <MapView
         ref={ref}
         style={StyleSheet.absoluteFill}
-        provider={PROVIDER_GOOGLE}
+        provider={provider}
         showsUserLocation
         initialRegion={{ latitude: TURKEY_CENTER.lat, longitude: TURKEY_CENTER.lng, latitudeDelta: 9, longitudeDelta: 14 }}
         region={region}
