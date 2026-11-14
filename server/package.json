@@ -1,0 +1,22 @@
+{
+  "name": "lezzet-rotasi-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Lezzet Rotası API sunucusu",
+  "scripts": {
+    "start": "node src/index.js",
+    "seed": "node src/seed.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.5.13",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "pg": "^8.16.3",
+    "qrcode": "^1.5.4"
+  }
+}

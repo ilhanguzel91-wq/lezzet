@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lezzet Rotası Yönetim</title>
+<style>
+  :root { --bg:#faf7f2; --card:#fff; --ink:#2a2118; --muted:#7a6d5f; --accent:#c2410c; --line:#e7dfd4; --ok:#15803d; --warn:#b45309; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.5 system-ui, sans-serif; background:var(--bg); color:var(--ink); }
+  header { background:var(--accent); color:#fff; padding:14px 20px; display:flex; justify-content:space-between; align-items:center; }
+  header h1 { margin:0; font-size:18px; }
+  main { max-width:1100px; margin:0 auto; padding:20px 16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; margin-bottom:16px; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
+  .stat b { display:block; font-size:24px; }
+  .stat span { color:var(--muted); font-size:13px; }
+  form.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; }
+  label { display:flex; flex-direction:column; font-size:13px; color:var(--muted); gap:4px; }
+  input, select, textarea { font:inherit; padding:8px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink); }
+  button { font:inherit; padding:8px 14px; border:0; border-radius:6px; background:var(--accent); color:#fff; cursor:pointer; }
+  button.ghost { background:transparent; color:var(--accent); border:1px solid var(--accent); padding:4px 10px; font-size:13px; }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th, td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); vertical-align:top; }
+  .tablewrap { overflow-x:auto; }
+  .pill { font-size:12px; padding:2px 8px; border-radius:99px; background:#eee; white-space:nowrap; }
+  .pill.active { background:#dcfce7; color:var(--ok); } .pill.expired, .pill.suspended { background:#fee2e2; color:#b91c1c; } .pill.pending { background:#fef3c7; color:var(--warn); }
+  .tags { display:flex; flex-wrap:wrap; gap:6px; }
+  .tags label { flex-direction:row; align-items:center; color:var(--ink); }
+  .msg { padding:8px 12px; border-radius:6px; margin-bottom:12px; display:none; }
+  .msg.err { display:block; background:#fee2e2; color:#991b1b; } .msg.ok { display:block; background:#dcfce7; color:#166534; }
+  #qrModal { position:fixed; inset:0; background:rgba(0,0,0,.5); display:none; align-items:center; justify-content:center; }
+  #qrModal .card { text-align:center; max-width:340px; }
+  #qrBox { display:flex; justify-content:center; margin:12px 0; }
+  @media print { header, main > *:not(#qrModal), #qrModal button { display:none !important; } #qrModal { position:static; display:flex !important; background:none; } }
+</style>
+</head>
+<body>
+<header><h1>Lezzet Rotası · Yönetim Paneli</h1><span id="who"></span></header>
+<main>
+  <div id="msg" class="msg"></div>
+
+  <section id="loginCard" class="card">
+    <h2>Giriş</h2>
+    <form id="loginForm" class="grid">
+      <label>E-posta<input name="email" type="email" required value="admin@lezzetrotasi.local"></label>
+      <label>Şifre<input name="password" type="password" required></label>
+      <div style="align-self:end"><button>Giriş yap</button></div>
+    </form>
+  </section>
+
+  <div id="app" hidden>
+    <section class="card"><div class="stats" id="stats"></div></section>
+
+    <section class="card">
+      <h2>Yeni işletme (sözleşme sonrası)</h2>
+      <form id="bizForm" class="grid">
+        <label>İşletme adı<input name="name" required></label>
+        <label>Mutfak<select name="cuisine" id="cuisineSel"></select></label>
+        <label>Şehir<input name="city" required></label>
+        <label>Adres<input name="address"></label>
+        <label>Telefon<input name="phone"></label>
+        <label>Enlem (lat)<input name="lat" type="number" step="any" required></label>
+        <label>Boylam (lng)<input name="lng" type="number" step="any" required></label>
+        <label>Fiyat seviyesi<select name="priceLevel"><option value="1">₺</option><option value="2" selected>₺₺</option><option value="3">₺₺₺</option><option value="4">₺₺₺₺</option></select></label>
+        <label>Abonelik bitişi<input name="subscriptionUntil" type="date" required></label>
+        <label>Çalışma saatleri<input name="openingHours" placeholder="08:00–22:00"></label>
+        <label>Öne çıkan lezzetler (virgülle)<input name="specialties"></label>
+        <label>Denetleyen ekip<input name="inspectedBy" placeholder="Saha Ekibi"></label>
+        <label style="grid-column:1/-1">Açıklama<textarea name="description" rows="2"></textarea></label>
+        <div style="grid-column:1/-1"><div class="tags" id="tagBoxes"></div></div>
+        <label>İşletme sahibi e-posta (isteğe bağlı)<input name="ownerEmail" type="email"></label>
+        <label>Sahip adı<input name="ownerName"></label>
+        <label>Sahip ilk şifresi<input name="ownerPassword" type="text"></label>
+        <div style="align-self:end"><button>İşletmeyi ekle</button></div>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>İşletmeler</h2>
+      <input id="filter" placeholder="Ara: ad, şehir…" style="width:100%;margin-bottom:10px">
+      <div class="tablewrap"><table>
+        <thead><tr><th>İşletme</th><th>Şehir</th><th>Puan</th><th>Sözleşme</th><th>Abonelik</th><th></th></tr></thead>
+        <tbody id="bizRows"></tbody>
+      </table></div>
+    </section>
+  </div>
+
+  <div id="qrModal"><div class="card">
+    <h3 id="qrTitle"></h3>
+    <p style="color:var(--muted);font-size:13px">Masaya / kasaya asılacak ziyaret onay kodu. Kullanıcı uygulamadan okutup puan verir.</p>
+    <div id="qrBox"></div>
+    <button onclick="window.print()">Yazdır</button>
+    <button class="ghost" onclick="closeQr()">Kapat</button>
+  </div></div>
+</main>
+
+<script>
+const API = location.origin + '/api';
+let token = sessionStorage.getItem('lr_token');
+let meta, businesses = [];
+
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+function flash(text, ok) { const m = $('#msg'); m.textContent = text; m.className = 'msg ' + (ok ? 'ok' : 'err'); setTimeout(() => (m.className = 'msg'), 4000); }
+
+async function api(path, opts = {}) {
+  const res = await fetch(API + path, { ...opts, headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token } , body: opts.body && JSON.stringify(opts.body) });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Hata');
+  return data;
+}
+
+$('#loginForm').onsubmit = async (e) => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  try {
+    const r = await fetch(API + '/auth/login', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(Object.fromEntries(f)) }).then((r) => r.json());
+    if (!r.token) throw new Error(r.error);
+    if (r.user.role !== 'admin') throw new Error('Bu panel yalnızca yöneticiler içindir.');
+    token = r.token; sessionStorage.setItem('lr_token', token); start();
+  } catch (err) { flash(err.message); }
+};
+
+async function start() {
+  try {
+    const me = await api('/me');
+    if (me.user.role !== 'admin') throw new Error('Yetkisiz');
+    $('#who').textContent = me.user.name;
+  } catch { sessionStorage.removeItem('lr_token'); return; }
+  $('#loginCard').hidden = true; $('#app').hidden = false;
+  meta = await fetch(API + '/meta').then((r) => r.json());
+  $('#cuisineSel').innerHTML = meta.cuisines.map((c) => `<option>${esc(c)}</option>`).join('');
+  $('#tagBoxes').innerHTML = meta.tags.map((t) => `<label><input type="checkbox" name="tags" value="${t.id}"> ${esc(t.label)}</label>`).join('');
+  const d = new Date(); d.setFullYear(d.getFullYear() + 1);
+  $('#bizForm').subscriptionUntil.value = d.toISOString().slice(0, 10);
+  refresh();
+}
+
+async function refresh() {
+  const [stats, list] = await Promise.all([api('/admin/stats'), api('/admin/businesses')]);
+  const labels = { users:'Kullanıcı', activeBusinesses:'Aktif işletme', expiringIn30Days:'30 günde bitecek abonelik', ratings:'Puan', visits:'Ziyaret', pendingReservations:'Bekleyen rezervasyon' };
+  $('#stats').innerHTML = Object.entries(stats).map(([k, v]) => `<div class="stat"><b>${v}</b><span>${labels[k]}</span></div>`).join('');
+  businesses = list; render();
+}
+
+function render() {
+  const q = $('#filter').value.toLocaleLowerCase('tr');
+  const today = new Date().toISOString().slice(0, 10);
+  $('#bizRows').innerHTML = businesses.filter((b) => !q || (b.name + ' ' + b.city).toLocaleLowerCase('tr').includes(q)).map((b) => {
+    const expired = b.subscriptionUntil < today;
+    const st = expired ? 'expired' : b.contractStatus;
+    const stLabel = { active:'Aktif', pending:'Beklemede', suspended:'Askıda', expired:'Süresi dolmuş' }[st];
+    return `<tr>
+      <td><b>${esc(b.name)}</b><br><small>${esc(b.cuisine)} · ${'₺'.repeat(b.priceLevel)}${b.inspected ? ' · denetlendi ' + esc(b.inspectedAt) : ''}</small></td>
+      <td>${esc(b.city)}</td>
+      <td>${b.rating.average ?? '–'} <small>(${b.rating.count})</small></td>
+      <td><span class="pill ${st}">${stLabel}</span></td>
+      <td>${esc(b.subscriptionUntil)}</td>
+      <td style="white-space:nowrap">
+        <button class="ghost" onclick="showQr(${b.id})">QR</button>
+        <button class="ghost" onclick="renew(${b.id})">+1 yıl</button>
+        <button class="ghost" onclick="toggle(${b.id})">${b.contractStatus === 'active' ? 'Askıya al' : 'Aktifleştir'}</button>
+        <button class="ghost" onclick="rotate(${b.id})">QR yenile</button>
+      </td></tr>`;
+  }).join('');
+}
+$('#filter').oninput = render;
+
+$('#bizForm').onsubmit = async (e) => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const body = Object.fromEntries([...f.entries()].filter(([k, v]) => k !== 'tags' && v !== ''));
+  body.tags = f.getAll('tags');
+  body.specialties = (body.specialties || '').split(',').map((s) => s.trim()).filter(Boolean);
+  body.lat = Number(body.lat); body.lng = Number(body.lng); body.priceLevel = Number(body.priceLevel);
+  try { const b = await api('/admin/businesses', { method:'POST', body }); flash(`${b.name} eklendi.`, true); e.target.reset(); start(); showQr(b.id, b); }
+  catch (err) { flash(err.message); }
+};
+
+const find = (id) => businesses.find((b) => b.id === id);
+async function renew(id) {
+  const b = find(id); const base = new Date(Math.max(Date.now(), new Date(b.subscriptionUntil).getTime()));
+  base.setFullYear(base.getFullYear() + 1);
+  await api(`/admin/businesses/${id}`, { method:'PATCH', body:{ subscriptionUntil: base.toISOString().slice(0, 10) } }).then(refresh).catch((e) => flash(e.message));
+}
+async function toggle(id) {
+  const b = find(id);
+  await api(`/admin/businesses/${id}`, { method:'PATCH', body:{ contractStatus: b.contractStatus === 'active' ? 'suspended' : 'active' } }).then(refresh).catch((e) => flash(e.message));
+}
+async function rotate(id) {
+  if (!confirm('Eski QR kod geçersiz olacak. Devam edilsin mi?')) return;
+  const b = await api(`/admin/businesses/${id}/rotate-qr`, { method:'POST' }); await refresh(); showQr(id, b);
+}
+async function showQr(id, b = find(id)) {
+  try {
+    const { svg } = await api(`/businesses/${id}/qr`);
+    $('#qrTitle').textContent = b.name; $('#qrBox').innerHTML = svg;
+    $('#qrModal').style.display = 'flex';
+  } catch (err) { flash(err.message); }
+}
+function closeQr() { $('#qrModal').style.display = 'none'; }
+
+if (token) start();
+</script>
+</body>
+</html>
