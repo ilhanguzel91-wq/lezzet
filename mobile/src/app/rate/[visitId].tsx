@@ -3,7 +3,7 @@ import { Alert, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
-import { colors, radius } from '../../lib/theme';
+import { colors, fonts, radius } from '../../lib/theme';
 import type { Rewards } from '../../lib/types';
 import { StarsInput } from '../../components/Stars';
 import { Button, Card, ErrorText } from '../../components/ui';
@@ -71,7 +71,7 @@ export default function RateScreen() {
 }
 
 const s = StyleSheet.create({
-  title: { fontSize: 20, fontWeight: '800', color: colors.ink },
+  title: { fontSize: 24, fontFamily: fonts.displayHeavy, color: colors.ink, letterSpacing: -0.4 },
   muted: { color: colors.muted, marginTop: 6 },
   input: {
     backgroundColor: colors.card,

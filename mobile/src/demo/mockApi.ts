@@ -244,8 +244,18 @@ export async function mockApi(path: string, method: string, body: any, token: st
         .map((b) => ({ ...b, distanceKm: Math.round(haversineKm([lat, lng], [b.lat, b.lng]) * 10) / 10 }))
         .filter((b) => b.distanceKm! <= radiusKm)
         .sort((a, b) => a.distanceKm! - b.distanceKm!);
+    } else {
+      items.sort((a, b) => b.rating.trustScore - a.rating.trustScore);
     }
     return items;
+  }
+  if (route('GET', /^\/products$/)) {
+    const city = q.get('city');
+    return raw.products.filter((x) => !city || x.city === city);
+  }
+  if (route('GET', /^\/campaigns$/)) {
+    const cities = (q.get('city') || '').split(',').filter(Boolean);
+    return raw.campaigns.filter((c) => !c.city || cities.includes(c.city));
   }
   if ((m = route('GET', /^\/businesses\/(\d+)$/))) {
     const b = businesses.find((x) => x.id === Number(m![1])) ?? fail(404, 'İşletme bulunamadı.');

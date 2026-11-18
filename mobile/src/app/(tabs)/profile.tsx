@@ -4,7 +4,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { useMeta } from '../../lib/meta';
-import { colors } from '../../lib/theme';
+import { colors, fonts } from '../../lib/theme';
 import type { Prefs, Reservation, Visit } from '../../lib/types';
 import { Badge, Button, Card, Chip, Empty, SectionTitle } from '../../components/ui';
 
@@ -229,10 +229,10 @@ function Stat({ n, label }: { n: number; label: string }) {
 }
 
 const s = StyleSheet.create({
-  title: { fontSize: 22, fontWeight: '800', color: colors.ink },
+  title: { fontSize: 26, fontFamily: fonts.displayHeavy, color: colors.ink, letterSpacing: -0.5 },
   muted: { color: colors.muted, fontSize: 13 },
-  big: { fontSize: 22, fontWeight: '800', color: colors.ink },
-  name: { fontWeight: '700', color: colors.ink, fontSize: 15 },
+  big: { fontSize: 24, fontFamily: fonts.displayHeavy, color: colors.ink },
+  name: { fontFamily: fonts.displayMedium, color: colors.ink, fontSize: 15 },
   between: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   wrap: { flexDirection: 'row', flexWrap: 'wrap' },
   bar: { height: 8, backgroundColor: colors.accentSoft, borderRadius: 99, marginVertical: 8, overflow: 'hidden' },

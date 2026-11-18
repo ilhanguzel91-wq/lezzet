@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '../lib/auth';
 import { DEMO } from '../lib/api';
-import { colors, radius } from '../lib/theme';
+import { colors, fonts, radius } from '../lib/theme';
 import { Button, Card, ErrorText } from '../components/ui';
 
 export default function LoginScreen() {
@@ -68,7 +68,7 @@ export default function LoginScreen() {
 }
 
 const s = StyleSheet.create({
-  title: { fontSize: 22, fontWeight: '800', color: colors.ink },
+  title: { fontSize: 26, fontFamily: fonts.displayHeavy, color: colors.ink, letterSpacing: -0.5 },
   muted: { color: colors.muted, marginTop: 6, marginBottom: 12 },
   input: {
     backgroundColor: colors.card,

@@ -1,6 +1,6 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import type { ReactNode } from 'react';
-import { colors, radius } from '../lib/theme';
+import { colors, fonts, radius } from '../lib/theme';
 
 export function Chip({ label, active, onPress }: { label: string; active?: boolean; onPress?: () => void }) {
   return (
@@ -104,7 +104,7 @@ const s = StyleSheet.create({
     minHeight: 46,
   },
   btnGhost: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.accent },
-  btnText: { color: '#fff', fontWeight: '600', fontSize: 15 },
+  btnText: { color: '#fff', fontFamily: fonts.displayMedium, fontSize: 16 },
   card: {
     backgroundColor: colors.card,
     borderRadius: radius,
@@ -113,7 +113,7 @@ const s = StyleSheet.create({
     padding: 14,
     marginBottom: 12,
   },
-  section: { fontSize: 17, fontWeight: '700', color: colors.ink, marginTop: 8, marginBottom: 10 },
+  section: { fontSize: 20, fontFamily: fonts.display, color: colors.ink, marginTop: 8, marginBottom: 10, letterSpacing: -0.2 },
   badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99, alignSelf: 'flex-start' },
   badgeText: { fontSize: 12, fontWeight: '600' },
   empty: { color: colors.muted, textAlign: 'center', paddingVertical: 24 },

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { api, filterQuery } from '../../lib/api';
 import { currentPosition, type Coords } from '../../lib/location';
+import { distanceKm } from '../../lib/geo';
 import { useMeta } from '../../lib/meta';
 import { colors } from '../../lib/theme';
 import { emptyFilters, type Business, type Filters } from '../../lib/types';
@@ -16,11 +17,23 @@ import { Button, Chip, Empty, ErrorText } from '../../components/ui';
  */
 export default function NearbyScreen() {
   const meta = useMeta();
+  const params = useLocalSearchParams<{ cuisine?: string }>();
   const [pos, setPos] = useState<Coords | null>(null);
-  const [radiusKm, setRadiusKm] = useState(10);
-  const [filters, setFilters] = useState<Filters>(emptyFilters);
+  const [radiusKm, setRadiusKm] = useState(params.cuisine ? 25 : 10);
+  const [filters, setFilters] = useState<Filters>(params.cuisine ? { ...emptyFilters, cuisines: [params.cuisine] } : emptyFilters);
+  // A category picked on the home page while this tab is already open.
+  const [appliedCuisine, setAppliedCuisine] = useState(params.cuisine ?? '');
+  const [pendingReload, setPendingReload] = useState(false);
+  if (params.cuisine && params.cuisine !== appliedCuisine) {
+    setAppliedCuisine(params.cuisine);
+    setFilters({ ...emptyFilters, cuisines: [params.cuisine] });
+    setRadiusKm(25);
+    setPendingReload(true);
+  }
   const [onlyReservable, setOnlyReservable] = useState(false);
   const [items, setItems] = useState<Business[] | null>(null);
+  // True when nothing matched nearby and the list shows the best matches across Turkey.
+  const [nationwide, setNationwide] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,7 +49,14 @@ export default function NearbyScreen() {
         q.set('lng', String(here.lng));
         q.set('radiusKm', String(r));
         if (reservable) q.set('reservations', '1');
-        setItems(await api<Business[]>(`/businesses?${q}`));
+        let found = await api<Business[]>(`/businesses?${q}`);
+        const wide = found.length === 0 && f.cuisines.length > 0;
+        if (wide) {
+          const all = await api<Business[]>(`/businesses?${filterQuery(f)}`);
+          found = all.slice(0, 15).map((b) => ({ ...b, distanceKm: Math.round(distanceKm(here, b)) }));
+        }
+        setNationwide(wide);
+        setItems(found);
       } catch (e) {
         setError((e as Error).message);
       } finally {
@@ -55,6 +75,14 @@ export default function NearbyScreen() {
         setLoading(false);
       });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!pendingReload) return;
+    Promise.resolve().then(() => {
+      setPendingReload(false);
+      load(pos);
+    });
+  }, [pendingReload]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pins = useMemo(
     () => (items ?? []).map((b) => ({ id: b.id, lat: b.lat, lng: b.lng, title: b.name, subtitle: b.cuisine, color: colors.accent })),
@@ -84,7 +112,12 @@ export default function NearbyScreen() {
           <FilterBar meta={meta} value={filters} onChange={(f) => { setFilters(f); load(pos, f); }} />
           <ErrorText text={error} />
           {error && <Button title="Tekrar dene" onPress={() => load(null)} variant="ghost" />}
-          {pos && (
+          {nationwide && (
+            <Text style={styles.notice}>
+              {radiusKm} km içinde {filters.cuisines.join(', ')} durağı yok. Türkiye genelinde en sevilenler:
+            </Text>
+          )}
+          {pos && !nationwide && (
             <RouteMap
               height={220}
               pins={pins}
@@ -103,4 +136,5 @@ export default function NearbyScreen() {
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4 },
   small: { color: colors.muted, fontSize: 13, marginRight: 6 },
+  notice: { color: colors.ink, fontSize: 14, lineHeight: 20, backgroundColor: colors.saffronSoft, borderRadius: 10, padding: 12, marginVertical: 10 },
 });

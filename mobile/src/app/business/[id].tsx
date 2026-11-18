@@ -4,7 +4,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { priceLabel, tagLabel, useMeta } from '../../lib/meta';
-import { colors, radius } from '../../lib/theme';
+import { colors, fonts, radius } from '../../lib/theme';
 import type { BusinessDetail } from '../../lib/types';
 import { StarsDisplay } from '../../components/Stars';
 import { Badge, Button, Card, Chip, Empty, ErrorText, SectionTitle } from '../../components/ui';
@@ -171,8 +171,8 @@ function ReservationForm({ businessId, loggedIn }: { businessId: number; loggedI
 }
 
 const s = StyleSheet.create({
-  title: { fontSize: 22, fontWeight: '800', color: colors.ink },
-  h3: { fontSize: 15, fontWeight: '700', color: colors.ink, marginBottom: 8 },
+  title: { fontSize: 26, fontFamily: fonts.displayHeavy, color: colors.ink, letterSpacing: -0.5 },
+  h3: { fontSize: 16, fontFamily: fonts.display, color: colors.ink, marginBottom: 8 },
   muted: { color: colors.muted },
   body: { color: colors.ink, marginTop: 8, lineHeight: 20 },
   row: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },

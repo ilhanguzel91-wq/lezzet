@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { colors, radius } from '../lib/theme';
+import { colors, fonts, radius } from '../lib/theme';
 import { priceLabel, tagLabel } from '../lib/meta';
 import type { Business, Meta } from '../lib/types';
 import { StarsDisplay } from './Stars';
@@ -57,7 +57,7 @@ const s = StyleSheet.create({
     marginBottom: 10,
   },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  name: { fontSize: 16, fontWeight: '700', color: colors.ink, flex: 1, marginRight: 8 },
+  name: { fontSize: 17, fontFamily: fonts.display, color: colors.ink, flex: 1, marginRight: 8 },
   price: { color: colors.ok, fontWeight: '600' },
   meta: { color: colors.muted, fontSize: 13, marginTop: 2 },
   ratingRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
