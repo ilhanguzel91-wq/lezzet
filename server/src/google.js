@@ -46,6 +46,7 @@ async function call(method, path, fields, body) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     console.warn('Google Places hatası:', res.status, data?.error?.message);
+    if (res.status === 400 && /api key/i.test(data?.error?.message ?? '')) throw new GoogleError(502, 'Google anahtarı geçersiz. Sunucudaki GOOGLE_PLACES_API_KEY değerini kontrol edin.');
     if (res.status === 403) throw new GoogleError(502, 'Google anahtarı reddedildi. "Places API (New)" servisinin açık ve anahtarın kısıtlamalarının doğru olduğunu kontrol edin.');
     if (res.status === 429) throw new GoogleError(429, 'Google arama kotası doldu, biraz sonra tekrar deneyin.');
     throw new GoogleError(502, 'Google Haritalar araması başarısız oldu.');
