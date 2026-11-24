@@ -29,6 +29,9 @@
   .tags label { flex-direction:row; align-items:center; color:var(--ink); }
   .msg { padding:8px 12px; border-radius:6px; margin-bottom:12px; display:none; }
   .msg.err { display:block; background:#fee2e2; color:#991b1b; } .msg.ok { display:block; background:#dcfce7; color:#166534; }
+  .gnote { color:var(--muted); font-size:12px; margin:6px 0 14px; }
+  .gres { display:flex; justify-content:space-between; gap:10px; align-items:center; padding:8px 0; border-bottom:1px solid var(--line); }
+  .gres small { color:var(--muted); }
   #qrModal { position:fixed; inset:0; background:rgba(0,0,0,.5); display:none; align-items:center; justify-content:center; }
   #qrModal .card { text-align:center; max-width:340px; }
   #qrBox { display:flex; justify-content:center; margin:12px 0; }
@@ -54,7 +57,17 @@
 
     <section class="card">
       <h2>Yeni işletme (sözleşme sonrası)</h2>
+      <div id="gBox" hidden>
+        <form id="gForm" class="grid" style="margin-bottom:10px">
+          <label style="grid-column:span 2">Google Haritalar'da bul<input id="gQuery" placeholder="ör. Afyon Kaymak Sofrası" required></label>
+          <label>Yakın şehir (isteğe bağlı)<input id="gCity" placeholder="ör. Afyonkarahisar"></label>
+          <div style="align-self:end"><button>Google'da ara</button></div>
+        </form>
+        <div id="gResults"></div>
+        <p class="gnote">Seçtiğiniz yerin adı, adresi, konumu, telefonu ve saatleri formu doldurur; kaydetmeden önce işletmeyle birlikte kontrol edin. Google Haritalar verisi.</p>
+      </div>
       <form id="bizForm" class="grid">
+        <input type="hidden" name="googlePlaceId">
         <label>İşletme adı<input name="name" required></label>
         <label>Mutfak<select name="cuisine" id="cuisineSel"></select></label>
         <label>Şehir<input name="city" required></label>
@@ -135,7 +148,35 @@ async function start() {
   const d = new Date(); d.setFullYear(d.getFullYear() + 1);
   $('#bizForm').subscriptionUntil.value = d.toISOString().slice(0, 10);
   refresh();
+  try { const g = await api('/google/status'); $('#gBox').hidden = !g.enabled; } catch { /* Google search stays hidden */ }
 }
+
+$('#gForm').onsubmit = async (e) => {
+  e.preventDefault();
+  const q = new URLSearchParams({ q: $('#gQuery').value.trim() });
+  if ($('#gCity').value.trim()) q.set('city', $('#gCity').value.trim());
+  $('#gResults').textContent = 'Aranıyor…';
+  try {
+    const { places } = await api('/admin/google/search?' + q);
+    $('#gResults').innerHTML = places.length ? places.map((p) => `<div class="gres"><div><b>${esc(p.name)}</b><br><small>${esc(p.address)}${p.rating ? ' · ★ ' + p.rating + ' (' + p.ratingCount + ')' : ''}</small></div>
+      <button class="ghost" type="button" data-place="${esc(p.placeId)}">Formu doldur</button></div>`).join('') : 'Sonuç bulunamadı.';
+  } catch (err) { $('#gResults').textContent = ''; flash(err.message); }
+};
+$('#gResults').onclick = async (e) => {
+  const id = e.target.dataset?.place;
+  if (!id) return;
+  try {
+    const { place } = await api('/admin/google/place/' + encodeURIComponent(id));
+    const f = $('#bizForm');
+    f.name.value = place.name; f.address.value = place.address; f.phone.value = place.phone || '';
+    f.lat.value = place.lat; f.lng.value = place.lng; f.googlePlaceId.value = place.placeId;
+    if (place.openingHours) f.openingHours.value = place.openingHours.slice(0, 200);
+    if (place.priceLevel) f.priceLevel.value = String(place.priceLevel);
+    if (!f.city.value && $('#gCity').value.trim()) f.city.value = $('#gCity').value.trim();
+    flash(`${place.name} bilgileri forma aktarıldı. Şehir, mutfak ve abonelik bilgisini tamamlayın.`, true);
+    f.city.focus();
+  } catch (err) { flash(err.message); }
+};
 
 async function refresh() {
   const [stats, list] = await Promise.all([api('/admin/stats'), api('/admin/businesses')]);

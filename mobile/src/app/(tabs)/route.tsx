@@ -11,6 +11,7 @@ import { BusinessCard } from '../../components/BusinessCard';
 import { RouteMap } from '../../components/RouteMap';
 import { CityPicker, MY_LOCATION } from '../../components/CityPicker';
 import { FilterBar } from '../../components/FilterBar';
+import { GooglePlaces } from '../../components/GooglePlaces';
 import { Badge, Button, Card, Chip, Empty, ErrorText, SectionTitle } from '../../components/ui';
 
 export default function RouteScreen() {
@@ -32,6 +33,8 @@ export default function RouteScreen() {
   const [corridor, setCorridor] = useState(10);
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [result, setResult] = useState<RouteResult | null>(null);
+  // Start/end of the last search, reused for the Google Maps search along the same route.
+  const [lastPoints, setLastPoints] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,6 +63,12 @@ export default function RouteScreen() {
       p.set('toCity', to);
       p.set('corridorKm', String(corridor));
       const r = await api<RouteResult>(`/route?${p}`);
+      const ends = new URLSearchParams();
+      for (const k of ['from', 'fromCity', 'toCity']) {
+        const v = p.get(k);
+        if (v) ends.set(k, v);
+      }
+      setLastPoints(ends.toString());
       setResult(r);
     } catch (e) {
       setError((e as Error).message);
@@ -165,9 +174,10 @@ export default function RouteScreen() {
       renderItem={({ item }) => <BusinessCard b={item} meta={meta} mode="route" />}
       ListEmptyComponent={result ? <Empty text="Bu filtrelerle güzergâhta durak bulunamadı. Filtreleri gevşetmeyi ya da sapma mesafesini artırmayı deneyin." /> : undefined}
       ListFooterComponent={
-        result && result.products.length > 0 ? (
+        result ? (
           <View>
-            <SectionTitle>Yol üstündeki yöresel ürünler</SectionTitle>
+            <GooglePlaces key={lastPoints} path={`/google/route-places?${lastPoints}`} mode="route" />
+            {result.products.length > 0 && <SectionTitle>Yol üstündeki yöresel ürünler</SectionTitle>}
             {result.products.map((p) => (
               <Card key={p.id}>
                 <Text style={styles.summary}>{p.name}</Text>

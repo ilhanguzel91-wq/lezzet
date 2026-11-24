@@ -10,6 +10,7 @@ import { getRoute } from './routing.js';
 import { CITIES } from './roadnet.js';
 import { haversineKm, locateOnPolyline, cumulativeKm, boundingBox, thin } from './geo.js';
 import { POINTS, rewardSummary } from './rewards.js';
+import { ATTRIBUTION, GoogleError, googleConfigured, placeDetails, placesAlongRoute, placesNearby, searchPlaces } from './google.js';
 
 export const TAGS = {
   vegan: 'Vegan',
@@ -116,6 +117,7 @@ function toBusiness(row, { includePrivate = false } = {}) {
       contractStatus: row.contract_status,
       subscriptionUntil: row.subscription_until,
       inspectedBy: row.inspected_by,
+      googlePlaceId: row.google_place_id,
     });
   }
   return out;
@@ -328,6 +330,57 @@ export function createApp(db) {
       : await db.all('SELECT * FROM products ORDER BY city, name'));
   }));
 
+  // ----- Google Maps places (live, not stored; shown apart from contracted stops) -----
+  /** Drops places that are already contracted businesses (same place ID, or same spot and name). */
+  async function withoutContracted(places) {
+    const ids = places.map((p) => p.placeId);
+    const known = ids.length
+      ? await db.all(`SELECT google_place_id, name, lat, lng FROM businesses WHERE google_place_id IN (${ids.map(() => '?').join(',')})
+                      OR (lat BETWEEN ? AND ? AND lng BETWEEN ? AND ?)`,
+          ...ids, Math.min(...places.map((p) => p.lat)) - 0.01, Math.max(...places.map((p) => p.lat)) + 0.01,
+          Math.min(...places.map((p) => p.lng)) - 0.01, Math.max(...places.map((p) => p.lng)) + 0.01)
+      : [];
+    const norm = (x) => x.toLocaleLowerCase('tr').replace(/[^a-zçğıöşü0-9]/g, '');
+    return places.filter((p) => !known.some((k) =>
+      k.google_place_id === p.placeId || (haversineKm([k.lat, k.lng], [p.lat, p.lng]) < 0.3 && norm(k.name) === norm(p.name))));
+  }
+
+  app.get('/api/google/status', (_req, res) => res.json({ enabled: googleConfigured(), attribution: ATTRIBUTION }));
+
+  app.get('/api/google/route-places', h(async (req, res) => {
+    const from = parsePoint(req.query.from, req.query.fromCity, 'Başlangıç');
+    const to = parsePoint(req.query.to, req.query.toCity, 'Varış');
+    const route = await getRoute(from, to);
+    const cum = cumulativeKm(route.points);
+    const places = (await withoutContracted(await placesAlongRoute(route.points)))
+      .map((p) => {
+        const loc = locateOnPolyline([p.lat, p.lng], route.points, cum);
+        return { ...p, offRouteKm: round1(loc.offRouteKm), alongKm: Math.round(loc.alongKm) };
+      })
+      .sort((a, b) => a.alongKm - b.alongKm);
+    res.json({ attribution: ATTRIBUTION, places });
+  }));
+
+  app.get('/api/google/nearby-places', h(async (req, res) => {
+    const lat = num(req.query.lat, 'lat', { min: -90, max: 90 });
+    const lng = num(req.query.lng, 'lng', { min: -180, max: 180 });
+    const radiusKm = num(req.query.radiusKm ?? 5, 'radiusKm', { min: 0.1, max: 50 });
+    const places = (await withoutContracted(await placesNearby(lat, lng, radiusKm)))
+      .map((p) => ({ ...p, distanceKm: round1(haversineKm([lat, lng], [p.lat, p.lng])) }))
+      .sort((a, b) => a.distanceKm - b.distanceKm);
+    res.json({ attribution: ATTRIBUTION, places });
+  }));
+
+  // Field team: find the business on Google Maps and pre-fill the contract form.
+  app.get('/api/admin/google/search', requireRole('admin'), h(async (req, res) => {
+    const q = str(req.query.q, 'q', { max: 120 });
+    const near = req.query.city && CITIES[req.query.city] ? CITIES[req.query.city] : undefined;
+    res.json({ attribution: ATTRIBUTION, places: await searchPlaces(q, near) });
+  }));
+  app.get('/api/admin/google/place/:placeId', requireRole('admin'), h(async (req, res) => {
+    res.json({ attribution: ATTRIBUTION, place: await placeDetails(String(req.params.placeId)) });
+  }));
+
   // ----- visits & ratings -----
   app.post('/api/visits', requireRole(), h(async (req, res) => {
     const raw = str(req.body.qr, 'qr', { max: 200 });
@@ -456,6 +509,7 @@ export function createApp(db) {
     opening_hours: ['openingHours', (v) => String(v).slice(0, 200)],
     accepts_reservations: ['acceptsReservations', (v) => !!v],
     contract_status: ['contractStatus', (v) => { if (!['pending', 'active', 'suspended'].includes(v)) throw bad('Geçersiz sözleşme durumu.'); return v; }],
+    google_place_id: ['googlePlaceId', (v) => (v ? str(v, 'googlePlaceId', { max: 300 }) : null)],
     subscription_until: ['subscriptionUntil', (v) => { if (!/^\d{4}-\d{2}-\d{2}$/.test(v) || Number.isNaN(Date.parse(v))) throw bad('Tarih YYYY-AA-GG olmalı.'); return v; }],
   };
 
@@ -503,7 +557,7 @@ export function createApp(db) {
         `INSERT INTO businesses (name, cuisine, city, lat, lng, subscription_until, qr_code, owner_id, inspected_at, inspected_by)
          VALUES (?,?,?,?,?,?,?,?, CASE WHEN ?::text IS NULL THEN NULL ELSE current_date END, ?)`,
         row.name, row.cuisine, row.city, row.lat, row.lng, row.until, newQr(), ownerId, inspectedBy, inspectedBy);
-      await updateBusinessFields(t, newId, body, ['description', 'address', 'phone', 'price_level', 'tags', 'specialties', 'opening_hours', 'accepts_reservations', 'contract_status']);
+      await updateBusinessFields(t, newId, body, ['description', 'address', 'phone', 'price_level', 'tags', 'specialties', 'opening_hours', 'accepts_reservations', 'contract_status', 'google_place_id']);
       return newId;
     });
     res.status(201).json(await adminBusiness(id));
@@ -512,7 +566,7 @@ export function createApp(db) {
   app.patch('/api/admin/businesses/:id', requireRole('admin'), h(async (req, res) => {
     const id = idParam(req.params.id);
     if (!(await db.get('SELECT 1 FROM businesses WHERE id = ?', id))) throw new HttpError(404, 'İşletme bulunamadı.');
-    await updateBusinessFields(db, id, req.body, ['name', 'description', 'cuisine', 'city', 'address', 'phone', 'lat', 'lng', 'price_level', 'tags', 'specialties', 'opening_hours', 'accepts_reservations', 'contract_status', 'subscription_until']);
+    await updateBusinessFields(db, id, req.body, ['name', 'description', 'cuisine', 'city', 'address', 'phone', 'lat', 'lng', 'price_level', 'tags', 'specialties', 'opening_hours', 'accepts_reservations', 'contract_status', 'subscription_until', 'google_place_id']);
     if (req.body.inspectedBy) await db.run('UPDATE businesses SET inspected_at = current_date, inspected_by = ? WHERE id = ?', String(req.body.inspectedBy).slice(0, 80), id);
     res.json(await adminBusiness(id));
   }));
@@ -556,7 +610,7 @@ export function createApp(db) {
   app.use('/api', (_req, res) => res.status(404).json({ error: 'Bulunamadı.' }));
   app.use((err, _req, res, _next) => {
     if (err.type === 'entity.parse.failed') return res.status(400).json({ error: 'Geçersiz JSON.' });
-    if (err.status && err.status < 500) return res.status(err.status).json({ error: err.message });
+    if (err instanceof GoogleError || (err.status && err.status < 500)) return res.status(err.status).json({ error: err.message });
     if (err.code === '23505') return res.status(409).json({ error: 'Bu kayıt zaten mevcut.' });
     console.error(err);
     res.status(500).json({ error: 'Sunucu hatası.' });

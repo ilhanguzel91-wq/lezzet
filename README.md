@@ -12,6 +12,7 @@ Seyahat güzergâhı üzerindeki anlaşmalı lezzet duraklarını ve yöresel ü
 
 | Proje metni | Uygulamadaki karşılığı |
 |---|---|
+| Google'daki gerçek yerler | Rota ve Yakınımda ekranlarında "Google Haritalar'daki diğer yerler" bölümü (istek üzerine yüklenir, "Anlaşmalı değil" etiketli, sıralamaya katılmaz). Yönetim panelinde "Google Haritalar'da bul" ile sözleşme formu doldurulur; işletmenin Google yer kimliği saklanır. |
 | Rota üzerindeki lezzet durakları | **Rota** sekmesi: başlangıç (konum veya şehir) ve varış seçilir. Yoldan en fazla 5/10/20 km uzaktaki anlaşmalı işletmeler, yol boyunca sırasıyla ("120 km sonra") listelenir. |
 | Damak tadı, sağlık, bütçe, aile durumu | Filtreler: vegan, vejetaryen, glütensiz, helal, diyet menü, çocuk dostu, aile salonu, engelli erişimi, otopark; mutfak türü; ₺–₺₺₺₺ bütçe; en düşük puan. Kullanıcının kayıtlı tercihleri varsayılan filtre olur. |
 | Yöresel ürünler | Güzergâh üzerindeki şehirlerin yöresel ürünleri rota sonucunda ve işletme sayfasında gösterilir. |
@@ -59,6 +60,7 @@ Ortam değişkenleri:
 | `PORT` | Varsayılan 4000 |
 | `AUTH_SECRET` | Oturum imza anahtarı. **Canlı ortamda zorunlu.** |
 | `GOOGLE_MAPS_API_KEY` | Verilirse gerçek yol rotası Google Directions API'den alınır. |
+| `GOOGLE_PLACES_API_KEY` | Google Haritalar'daki gerçek lokantaları getirir ("Places API (New)" açık olmalı). Verilmezse `GOOGLE_MAPS_API_KEY` kullanılır; ikisi de yoksa bu özellik gizlenir. |
 | `OSRM_URL` | Alternatif ücretsiz rota sunucusu (ör. kendi OSRM kurulumunuz) |
 | `DATABASE_URL` | PostgreSQL bağlantısı (Cloud SQL). Verilmezse gömülü PGlite kullanılır. |
 | `PGLITE_DIR` | Gömülü veritabanı klasörü (varsayılan `server/data/pglite`) |
@@ -101,6 +103,7 @@ Ardından `http://localhost:4000` adresini açın. Kamera yoksa QR ekranında ko
 |---|---|
 | `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/me`, `PUT /api/me/prefs` | Hesap ve tercihler |
 | `GET /api/route?fromCity=İstanbul&toCity=Ankara&corridorKm=10&tags=vegan&maxPrice=2` | Rota, duraklar, yöresel ürünler, kampanyalar (`from=lat,lng` de olur) |
+| `GET /api/google/route-places?…`, `GET /api/google/nearby-places?lat=&lng=&radiusKm=`, `GET /api/admin/google/search?q=`, `GET /api/admin/google/place/:placeId` | Google Haritalar'daki yerler (canlı; saklanmaz) |
 | `GET /api/businesses?lat=&lng=&radiusKm=` · `GET /api/businesses/:id` | Yakındakiler, işletme detayı |
 | `POST /api/visits` `{qr, lat, lng}` · `POST /api/ratings` `{visitId, score, taste, hygiene, value, comment}` | Ziyaret onayı ve puan |
 | `GET /api/me/visits`, `GET /api/me/points` | Kullanıcının ziyaretleri ve puan geçmişi |

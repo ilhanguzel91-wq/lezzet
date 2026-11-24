@@ -108,3 +108,20 @@ export type Reservation = {
 
 export type Filters = { tags: string[]; cuisines: string[]; maxPrice: number | null; minRating: number | null };
 export const emptyFilters: Filters = { tags: [], cuisines: [], maxPrice: null, minRating: null };
+
+/** A restaurant from Google Maps (live result, not a contracted stop). */
+export type GooglePlace = {
+  placeId: string;
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+  rating: number | null;
+  ratingCount: number;
+  priceLevel: number | null;
+  type: string;
+  mapsUrl: string;
+  alongKm?: number;
+  offRouteKm?: number;
+  distanceKm?: number;
+};

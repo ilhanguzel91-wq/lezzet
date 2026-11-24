@@ -52,13 +52,15 @@ Konsolda **Google Maps Platform → Anahtarlar ve Kimlik Bilgileri** bölümünd
 |---|---|---|
 | Android | Maps SDK for Android | Android uygulaması: `com.lezzetrotasi.app` + imza SHA-1 (Play Console → Uygulama bütünlüğü) |
 | iOS | Maps SDK for iOS | iOS uygulaması: `com.lezzetrotasi.app` |
-| Sunucu | Directions API | API kısıtlaması: yalnızca Directions API |
+| Sunucu | Directions API **ve Places API (New)** | API kısıtlaması: yalnızca bu iki API |
 
 Sunucu anahtarını vermek için:
 
 ```bash
 PROJECT_ID=<proje-kimliği> ADMIN_EMAIL=<e-posta> MAPS_SERVER_KEY=<sunucu-anahtarı> bash deploy/gcp-kurulum.sh
 ```
+
+Aynı sunucu anahtarı Google Haritalar'daki gerçek lokantaları getirmek için de kullanılır (Rota ve Yakınımda ekranlarındaki "Google Haritalar'daki diğer yerler" bölümü ile yönetim panelindeki "Google Haritalar'da bul"). Google'ın kullanım koşulları gereği bu sonuçlar her istekte canlı alınır ve veritabanına kaydedilmez; yalnızca anlaşmalı işletmelerin Google yer kimliği saklanır.
 
 Sunucu anahtarı verilmezse rota, yerleşik yol ağıyla yaklaşık olarak hesaplanır. Uygulama yine çalışır ama mesafeler kabadır.
 

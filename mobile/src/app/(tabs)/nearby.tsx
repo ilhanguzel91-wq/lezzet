@@ -10,6 +10,7 @@ import { emptyFilters, type Business, type Filters } from '../../lib/types';
 import { BusinessCard } from '../../components/BusinessCard';
 import { RouteMap } from '../../components/RouteMap';
 import { FilterBar } from '../../components/FilterBar';
+import { GooglePlaces } from '../../components/GooglePlaces';
 import { Button, Chip, Empty, ErrorText } from '../../components/ui';
 
 /**
@@ -128,6 +129,15 @@ export default function NearbyScreen() {
         </View>
       }
       renderItem={({ item }) => <BusinessCard b={item} meta={meta} mode="nearby" />}
+      ListFooterComponent={
+        pos ? (
+          <GooglePlaces
+            key={`${pos.lat},${pos.lng},${radiusKm}`}
+            path={`/google/nearby-places?lat=${pos.lat}&lng=${pos.lng}&radiusKm=${Math.min(radiusKm, 50)}`}
+            mode="nearby"
+          />
+        ) : undefined
+      }
       ListEmptyComponent={items && !loading ? <Empty text="Yakınınızda bu filtrelere uyan anlaşmalı işletme yok." /> : undefined}
     />
   );

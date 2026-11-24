@@ -96,3 +96,20 @@ export function decodePolyline(str) {
   }
   return out;
 }
+
+/** Encodes [[lat, lng], ...] as a Google encoded polyline. */
+export function encodePolyline(points) {
+  let out = '', prevLat = 0, prevLng = 0;
+  const enc = (v) => {
+    let n = v < 0 ? ~(v << 1) : v << 1;
+    let s = '';
+    while (n >= 0x20) { s += String.fromCharCode((0x20 | (n & 0x1f)) + 63); n >>= 5; }
+    return s + String.fromCharCode(n + 63);
+  };
+  for (const [lat, lng] of points) {
+    const la = Math.round(lat * 1e5), ln = Math.round(lng * 1e5);
+    out += enc(la - prevLat) + enc(ln - prevLng);
+    prevLat = la; prevLng = ln;
+  }
+  return out;
+}
